@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPTX to Image Converter - Test Page</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .upload-section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .drop-zone {
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8fafc;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #2980b9;
+            background: #ebf5fb;
+        }
+        .drop-zone input {
+            display: none;
+        }
+        .drop-zone p {
+            margin: 0;
+            font-size: 16px;
+            color: #666;
+        }
+        .drop-zone .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .file-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e8f4f8;
+            border-radius: 4px;
+            display: none;
+        }
+        .file-info.show {
+            display: block;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s ease;
+        }
+        button:hover:not(:disabled) {
+            background: #2980b9;
+        }
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .progress-section {
+            display: none;
+            margin-top: 20px;
+        }
+        .progress-section.show {
+            display: block;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .status-message {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .error-message {
+            color: #e74c3c;
+            background: #fdeaea;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            display: none;
+        }
+        .error-message.show {
+            display: block;
+        }
+        .results-section {
+            display: none;
+        }
+        .results-section.show {
+            display: block;
+        }
+        .results-header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .results-header h2 {
+            margin: 0 0 10px 0;
+            color: #27ae60;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .stat {
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-radius: 4px;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .image-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .image-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .image-card img:hover {
+            transform: scale(1.02);
+        }
+        .image-card-footer {
+            padding: 10px 15px;
+            background: #f8f9fa;
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .image-card-footer a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .image-card-footer a:hover {
+            text-decoration: underline;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.show {
+            display: flex;
+        }
+        .modal img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+        }
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 40px;
+            color: white;
+            cursor: pointer;
+        }
+        .api-url-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .conversion-type {
+            margin-bottom: 20px;
+        }
+        .conversion-type > label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .radio-group {
+            display: flex;
+            gap: 20px;
+        }
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .radio-label:hover {
+            border-color: #3498db;
+        }
+        .radio-label input[type="radio"] {
+            cursor: pointer;
+        }
+        .radio-label input[type="radio"]:checked + span {
+            color: #3498db;
+            font-weight: 500;
+        }
+        .radio-label:has(input:checked) {
+            border-color: #3498db;
+            background: #ebf5fb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Media Converter - Test Page</h1>
+
+    <div class="upload-section">
+        <label>API Base URL:</label>
+        <input type="text" id="apiUrl" class="api-url-input" value="http://localhost:8000" placeholder="http://localhost:8000">
+
+        <div class="conversion-type">
+            <label>Conversion Type:</label>
+            <div class="radio-group">
+                <label class="radio-label">
+                    <input type="radio" name="conversionType" value="pptx" checked>
+                    <span>PPTX to Images</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="conversionType" value="pdf">
+                    <span>PDF to Images</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="drop-zone" id="dropZone">
+            <div class="icon">📄</div>
+            <p id="dropText">Drop your PPTX file here or click to browse</p>
+            <input type="file" id="fileInput" accept=".pptx,.ppt">
+        </div>
+
+        <div class="file-info" id="fileInfo">
+            <strong>Selected file:</strong> <span id="fileName"></span> (<span id="fileSize"></span>)
+        </div>
+
+        <button id="convertBtn" disabled>Convert to Images</button>
+
+        <div class="progress-section" id="progressSection">
+            <div class="progress-bar">
+                <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
+            <div class="status-message" id="statusMessage">Uploading...</div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+    </div>
+
+    <div class="results-section" id="resultsSection">
+        <div class="results-header">
+            <h2>Conversion Complete</h2>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label" id="totalLabel">Total Slides</div>
+                    <div class="stat-value" id="totalSlides">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Processing Time</div>
+                    <div class="stat-value" id="processingTime">0ms</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Job ID</div>
+                    <div class="stat-value" id="jobId" style="font-size: 12px;">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="image-grid" id="imageGrid"></div>
+    </div>
+
+    <div class="modal" id="imageModal">
+        <span class="modal-close" id="modalClose">&times;</span>
+        <img id="modalImage" src="" alt="Full size image">
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const convertBtn = document.getElementById('convertBtn');
+        const progressSection = document.getElementById('progressSection');
+        const progressFill = document.getElementById('progressFill');
+        const statusMessage = document.getElementById('statusMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultsSection = document.getElementById('resultsSection');
+        const imageGrid = document.getElementById('imageGrid');
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalClose = document.getElementById('modalClose');
+        const apiUrlInput = document.getElementById('apiUrl');
+        const dropText = document.getElementById('dropText');
+        const conversionTypeRadios = document.querySelectorAll('input[name="conversionType"]');
+
+        let selectedFile = null;
+
+        // Conversion type configuration
+        const conversionConfig = {
+            pptx: {
+                accept: '.pptx,.ppt',
+                extensions: ['pptx', 'ppt'],
+                endpoint: '/api/v1/convert/pptx-to-image',
+                dropText: 'Drop your PPTX file here or click to browse',
+                label: 'slides'
+            },
+            pdf: {
+                accept: '.pdf',
+                extensions: ['pdf'],
+                endpoint: '/api/v1/convert/pdf-to-image',
+                dropText: 'Drop your PDF file here or click to browse',
+                label: 'pages'
+            }
+        };
+
+        function getConversionType() {
+            return document.querySelector('input[name="conversionType"]:checked').value;
+        }
+
+        function updateUIForConversionType() {
+            const type = getConversionType();
+            const config = conversionConfig[type];
+            fileInput.accept = config.accept;
+            dropText.textContent = config.dropText;
+
+            // Clear selected file when switching types
+            if (selectedFile) {
+                const ext = selectedFile.name.split('.').pop().toLowerCase();
+                if (!config.extensions.includes(ext)) {
+                    selectedFile = null;
+                    fileInfo.classList.remove('show');
+                    convertBtn.disabled = true;
+                }
+            }
+        }
+
+        // Listen for conversion type changes
+        conversionTypeRadios.forEach(radio => {
+            radio.addEventListener('change', updateUIForConversionType);
+        });
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // Handle file selection
+        function handleFile(file) {
+            if (!file) return;
+
+            const type = getConversionType();
+            const config = conversionConfig[type];
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            if (!config.extensions.includes(ext)) {
+                showError(`Please select a ${config.accept} file`);
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.classList.add('show');
+            convertBtn.disabled = false;
+            hideError();
+        }
+
+        // Drop zone events
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            handleFile(file);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFile(e.target.files[0]);
+        });
+
+        // Show/hide error
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.classList.add('show');
+        }
+
+        function hideError() {
+            errorMessage.classList.remove('show');
+        }
+
+        // Convert button click
+        convertBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            const apiUrl = apiUrlInput.value.replace(/\/$/, '');
+            const type = getConversionType();
+            const config = conversionConfig[type];
+
+            // Reset UI
+            hideError();
+            resultsSection.classList.remove('show');
+            progressSection.classList.add('show');
+            progressFill.style.width = '0%';
+            statusMessage.textContent = 'Uploading...';
+            convertBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                // Simulate upload progress
+                progressFill.style.width = '30%';
+                statusMessage.textContent = 'Uploading file...';
+
+                const response = await fetch(`${apiUrl}${config.endpoint}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                progressFill.style.width = '60%';
+                statusMessage.textContent = 'Processing...';
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Conversion failed');
+                }
+
+                const result = await response.json();
+
+                progressFill.style.width = '100%';
+                statusMessage.textContent = 'Complete!';
+
+                // Display results
+                displayResults(result, apiUrl, config.label);
+
+            } catch (error) {
+                showError(error.message || 'An error occurred during conversion');
+                progressSection.classList.remove('show');
+            } finally {
+                convertBtn.disabled = false;
+            }
+        });
+
+        // Display results
+        function displayResults(result, apiUrl, label = 'slides') {
+            const itemLabel = label === 'pages' ? 'Page' : 'Slide';
+            document.getElementById('totalLabel').textContent = `Total ${itemLabel}s`;
+            document.getElementById('totalSlides').textContent = result.total_slides;
+            document.getElementById('processingTime').textContent = result.processing_time_ms + 'ms';
+            document.getElementById('jobId').textContent = result.job_id;
+
+            imageGrid.innerHTML = '';
+
+            result.images.forEach((imagePath, index) => {
+                const fullUrl = apiUrl + imagePath;
+
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                card.innerHTML = `
+                    <img src="${fullUrl}" alt="${itemLabel} ${index + 1}" loading="lazy">
+                    <div class="image-card-footer">
+                        <span>${itemLabel} ${index + 1}</span>
+                        <a href="${fullUrl}" target="_blank" download>Download</a>
+                    </div>
+                `;
+
+                card.querySelector('img').addEventListener('click', () => {
+                    modalImage.src = fullUrl;
+                    imageModal.classList.add('show');
+                });
+
+                imageGrid.appendChild(card);
+            });
+
+            resultsSection.classList.add('show');
+            progressSection.classList.remove('show');
+
+            // Scroll to results
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Modal close
+        modalClose.addEventListener('click', () => {
+            imageModal.classList.remove('show');
+        });
+
+        imageModal.addEventListener('click', (e) => {
+            if (e.target === imageModal) {
+                imageModal.classList.remove('show');
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                imageModal.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>

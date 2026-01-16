@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     upload_dir: str = "./uploads"
     max_file_size_mb: int = 100
     allowed_extensions: Set[str] = {".ppt", ".pptx"}
+    allowed_pdf_extensions: Set[str] = {".pdf"}
 
     # Conversion settings
     image_dpi: int = Field(default=200, ge=72, le=600)

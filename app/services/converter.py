@@ -277,3 +277,147 @@ def convert_pptx_sync(input_path: str, job_id: str) -> ConversionResult:
     """
     converter = PptxConverter()
     return converter.convert(input_path, job_id)
+
+
+class PdfConverter:
+    """
+    Handles PDF to Image conversion using Poppler.
+
+    Conversion Pipeline:
+    PDF -> Images (via Poppler/pdf2image)
+    """
+
+    def __init__(self):
+        self.settings = get_settings()
+
+    def convert(self, input_path: str, job_id: str) -> ConversionResult:
+        """
+        Convert a PDF file to images.
+
+        This is a SYNCHRONOUS method designed to run in a ProcessPoolExecutor.
+
+        Args:
+            input_path: Path to the input PDF file
+            job_id: Unique job identifier for output directory
+
+        Returns:
+            ConversionResult with success status and image paths
+        """
+        input_path = Path(input_path)
+
+        if not input_path.exists():
+            return ConversionResult(
+                success=False,
+                images=[],
+                slide_count=0,
+                error=f"Input file not found: {input_path}",
+            )
+
+        # Create output directory
+        output_dir = Path(self.settings.upload_dir) / "pdf-to-image" / job_id
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            logger.info(f"Job {job_id}: Converting PDF to images...")
+            images = self._convert_pdf_to_images(input_path, output_dir)
+
+            logger.info(f"Job {job_id}: Successfully created {len(images)} images")
+            return ConversionResult(
+                success=True,
+                images=images,
+                slide_count=len(images),
+                error=None,
+            )
+
+        except ConversionError as e:
+            logger.error(f"Job {job_id}: Conversion failed - {e}")
+            return ConversionResult(
+                success=False,
+                images=[],
+                slide_count=0,
+                error=str(e),
+            )
+        except Exception as e:
+            logger.exception(f"Job {job_id}: Unexpected error")
+            return ConversionResult(
+                success=False,
+                images=[],
+                slide_count=0,
+                error=f"Unexpected error: {e}",
+            )
+
+    def _convert_pdf_to_images(self, pdf_path: Path, output_dir: Path) -> List[str]:
+        """
+        Convert PDF pages to images using Poppler.
+
+        Args:
+            pdf_path: Path to PDF file
+            output_dir: Directory for output images
+
+        Returns:
+            List of image file paths (relative URLs)
+
+        Raises:
+            ConversionError: If conversion fails
+        """
+        try:
+            # Convert PDF to PIL Images
+            images = convert_from_path(
+                pdf_path,
+                dpi=self.settings.image_dpi,
+                fmt=self.settings.image_format.lower(),
+                thread_count=2,
+                use_pdftocairo=True,
+            )
+
+            image_paths = []
+
+            for idx, image in enumerate(images, start=1):
+                # Generate filename: page_001.jpg, page_002.jpg, etc.
+                ext = self.settings.image_format.lower()
+                if ext == "jpeg":
+                    ext = "jpg"
+                filename = f"page_{idx:03d}.{ext}"
+                filepath = output_dir / filename
+
+                # Save image with quality settings
+                save_kwargs = {}
+                if self.settings.image_format == "JPEG":
+                    save_kwargs["quality"] = self.settings.jpeg_quality
+                    save_kwargs["optimize"] = True
+                elif self.settings.image_format == "PNG":
+                    save_kwargs["optimize"] = True
+
+                image.save(filepath, self.settings.image_format, **save_kwargs)
+
+                # Store relative path for API response
+                relative_path = filepath.relative_to(self.settings.upload_dir)
+                image_paths.append(f"/uploads/{relative_path}")
+
+                logger.debug(f"Saved page {idx}: {filepath}")
+
+            return image_paths
+
+        except PDFInfoNotInstalledError:
+            raise ConversionError("Poppler (pdfinfo) not installed")
+        except PDFPageCountError:
+            raise ConversionError("Could not determine PDF page count - file may be corrupted")
+        except Exception as e:
+            raise ConversionError(f"PDF to image conversion failed: {e}")
+
+
+def convert_pdf_sync(input_path: str, job_id: str) -> ConversionResult:
+    """
+    Synchronous PDF conversion function for use with ProcessPoolExecutor.
+
+    This function is defined at module level to be picklable.
+
+    Args:
+        input_path: Path to the input PDF file
+        job_id: Unique job identifier
+
+    Returns:
+        ConversionResult with success status and image paths
+    """
+    converter = PdfConverter()
+    return converter.convert(input_path, job_id)

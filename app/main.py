@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
@@ -123,6 +124,20 @@ async def root():
         "docs": "/docs",
         "health": "/health",
     }
+
+
+@app.get("/test.html", tags=["System"], include_in_schema=False)
+async def test_page():
+    """Serve the test HTML page."""
+    # Try multiple locations (local dev vs Docker)
+    possible_paths = [
+        Path(__file__).parent.parent / "test.html",  # Local: repo root
+        Path("/app/test.html"),  # Docker: mounted volume
+    ]
+    for test_file in possible_paths:
+        if test_file.exists():
+            return FileResponse(test_file, media_type="text/html")
+    return {"error": "Test page not found"}
 
 
 # Include API routers

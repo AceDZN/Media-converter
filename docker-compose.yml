@@ -11,6 +11,8 @@ services:
     volumes:
       # Persist uploads between container restarts
       - ./uploads:/app/uploads
+      # Test page for development
+      - ./test.html:/app/test.html:ro
     environment:
       - APP_ENV=development
       - DEBUG=false
