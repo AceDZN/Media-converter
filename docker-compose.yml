@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  media-converter:
+    build:
+      context: .
+      target: production
+    container_name: media-converter
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist uploads between container restarts
+      - ./uploads:/app/uploads
+    environment:
+      - APP_ENV=development
+      - DEBUG=false
+      - MAX_WORKERS=3
+      - MAX_FILE_SIZE_MB=100
+      - IMAGE_DPI=200
+      - IMAGE_FORMAT=JPEG
+      - JPEG_QUALITY=90
+      - JOB_TIMEOUT_SECONDS=300
+      - JOB_TTL_HOURS=24
+    # Resource limits to prevent runaway processes
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
