@@ -1,17 +1,16 @@
 version: '3.8'
 
 services:
-  media-converter:
+  # Python/FastAPI service (port 8000)
+  media-converter-python:
     build:
       context: .
       target: production
-    container_name: media-converter
+    container_name: media-converter-python
     ports:
       - "8000:8000"
     volumes:
-      # Persist uploads between container restarts
       - ./uploads:/app/uploads
-      # Test page for development
       - ./test.html:/app/test.html:ro
     environment:
       - APP_ENV=development
@@ -23,7 +22,6 @@ services:
       - JPEG_QUALITY=90
       - JOB_TIMEOUT_SECONDS=300
       - JOB_TTL_HOURS=24
-    # Resource limits to prevent runaway processes
     deploy:
       resources:
         limits:
@@ -35,6 +33,39 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Node.js/Express service (port 8001)
+  media-converter-node:
+    build:
+      context: ./node-service
+    container_name: media-converter-node
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./uploads-node:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - PORT=8000
+      - MAX_FILE_SIZE_MB=100
+      - IMAGE_DPI=200
+      - IMAGE_FORMAT=jpeg
+      - JPEG_QUALITY=90
+      - JOB_TIMEOUT_SECONDS=300
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -263,14 +263,40 @@
             border-color: #3498db;
             background: #ebf5fb;
         }
+        .backend-selector {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .backend-selector > label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .backend-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
     <h1>Media Converter - Test Page</h1>
 
     <div class="upload-section">
-        <label>API Base URL:</label>
-        <input type="text" id="apiUrl" class="api-url-input" value="http://localhost:8000" placeholder="http://localhost:8000">
+        <div class="backend-selector">
+            <label>Backend:</label>
+            <div class="radio-group">
+                <label class="radio-label">
+                    <input type="radio" name="backend" value="python" checked>
+                    <span>Python (FastAPI) - :8000</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="backend" value="node">
+                    <span>Node.js (Express) - :8001</span>
+                </label>
+            </div>
+        </div>
 
         <div class="conversion-type">
             <label>Conversion Type:</label>
@@ -313,6 +339,10 @@
             <h2>Conversion Complete</h2>
             <div class="stats">
                 <div class="stat">
+                    <div class="stat-label">Backend</div>
+                    <div class="stat-value" id="backendUsed" style="font-size: 14px;">-</div>
+                </div>
+                <div class="stat">
                     <div class="stat-label" id="totalLabel">Total Slides</div>
                     <div class="stat-value" id="totalSlides">0</div>
                 </div>
@@ -351,11 +381,27 @@
         const imageModal = document.getElementById('imageModal');
         const modalImage = document.getElementById('modalImage');
         const modalClose = document.getElementById('modalClose');
-        const apiUrlInput = document.getElementById('apiUrl');
         const dropText = document.getElementById('dropText');
         const conversionTypeRadios = document.querySelectorAll('input[name="conversionType"]');
+        const backendRadios = document.querySelectorAll('input[name="backend"]');
 
         let selectedFile = null;
+
+        // Backend configuration
+        const backendConfig = {
+            python: {
+                url: 'http://localhost:8000',
+                name: 'Python (FastAPI)'
+            },
+            node: {
+                url: 'http://localhost:8001',
+                name: 'Node.js (Express)'
+            }
+        };
+
+        function getBackend() {
+            return document.querySelector('input[name="backend"]:checked').value;
+        }
 
         // Conversion type configuration
         const conversionConfig = {
@@ -466,7 +512,9 @@
         convertBtn.addEventListener('click', async () => {
             if (!selectedFile) return;
 
-            const apiUrl = apiUrlInput.value.replace(/\/$/, '');
+            const backend = getBackend();
+            const apiUrl = backendConfig[backend].url;
+            const backendName = backendConfig[backend].name;
             const type = getConversionType();
             const config = conversionConfig[type];
 
@@ -475,7 +523,7 @@
             resultsSection.classList.remove('show');
             progressSection.classList.add('show');
             progressFill.style.width = '0%';
-            statusMessage.textContent = 'Uploading...';
+            statusMessage.textContent = `Uploading to ${backendName}...`;
             convertBtn.disabled = true;
 
             try {
@@ -492,7 +540,7 @@
                 });
 
                 progressFill.style.width = '60%';
-                statusMessage.textContent = 'Processing...';
+                statusMessage.textContent = `Processing with ${backendName}...`;
 
                 if (!response.ok) {
                     const error = await response.json();
@@ -505,7 +553,7 @@
                 statusMessage.textContent = 'Complete!';
 
                 // Display results
-                displayResults(result, apiUrl, config.label);
+                displayResults(result, apiUrl, config.label, backendName);
 
             } catch (error) {
                 showError(error.message || 'An error occurred during conversion');
@@ -516,8 +564,9 @@
         });
 
         // Display results
-        function displayResults(result, apiUrl, label = 'slides') {
+        function displayResults(result, apiUrl, label = 'slides', backendName = '') {
             const itemLabel = label === 'pages' ? 'Page' : 'Slide';
+            document.getElementById('backendUsed').textContent = backendName;
             document.getElementById('totalLabel').textContent = `Total ${itemLabel}s`;
             document.getElementById('totalSlides').textContent = result.total_slides;
             document.getElementById('processingTime').textContent = result.processing_time_ms + 'ms';
